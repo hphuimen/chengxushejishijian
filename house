@@ -1,0 +1,215 @@
+#include<stdio.h>
+#include<math.h>
+#include<stdlib.h>
+#define k 0.03
+#define practicedata 400
+#define textdata 106
+#define n 15
+#define new_n 6
+int count = 50000;
+double a[practicedata][n];
+double b[textdata][n];
+double w[new_n - 1];
+double new_w[new_n - 1];
+double y[textdata];
+double new_a[practicedata][new_n];
+double new_b[textdata][new_n];
+double max[new_n], min[new_n];
+double r[n - 1];
+double ad_x[n];
+int index[4];
+double rmse = 0;
+
+int inputs();
+void initdata();//数据归一化
+void model_practice();
+void model_access();
+void model_optimize();
+
+int main()
+{
+	if (inputs() == 0)
+	{
+		return 0;
+	}
+	model_optimize();
+	initdata();
+	model_practice();
+	model_access();
+	printf("%lf\n", rmse);
+	return 0;
+}
+
+int inputs()
+{
+	int i, j;
+	char fname[256];
+	printf("请输入存放数据的文件名：");
+	scanf("%s", fname);
+	FILE* fp = fopen(fname, "rb");
+	if (fp == NULL)
+	{
+		printf("不能打开输入的文件\n");
+		return 0;
+	}
+	for (i = 0;i < practicedata;i++)
+	{
+		a[i][0] = 1;
+		for (j = 1;j < n;j++)
+		{
+			fscanf(fp, "%lf", &a[i][j]);
+		}
+	}
+	for (i = 0;i < textdata;i++)
+	{
+		b[i][0] = 1;
+		for (j = 1;j < n;j++)
+		{
+			fscanf(fp, "%lf", &b[i][j]);
+		}
+	}
+	fclose(fp);
+	return 1;
+}
+
+void initdata()
+{
+	int i, j;
+	for (j = 1;j < new_n;j++)
+	{
+		max[j] = min[j] = new_a[0][j];
+		for (i = 0;i < practicedata;i++)
+		{
+			max[j] = max[j] > new_a[i][j] ? max[j] : new_a[i][j];
+			min[j] = min[j] < new_a[i][j] ? min[j] : new_a[i][j];
+		}
+	}
+	for (i = 0;i < practicedata;i++)
+	{
+		for (j = 1;j < new_n;j++)
+		{
+			if (max[j]!=min[j]) new_a[i][j] = (new_a[i][j] - min[j]) / (max[j] - min[j]);
+		}
+	}
+	for (j = 1;j < new_n;j++)
+	{
+		max[j] = min[j] = new_b[0][j];
+		for (i = 0;i < textdata;i++)
+		{
+			max[j] = max[j] > new_b[i][j] ? max[j] : new_b[i][j];
+			min[j] = min[j] < new_b[i][j] ? min[j] : new_b[i][j];
+		}
+	}
+	for (i = 0;i < textdata;i++)
+	{
+		for (j = 1;j < new_n;j++)
+		{
+			if (max[j]!=min[j]) new_b[i][j] = (new_b[i][j] - min[j]) / (max[j] - min[j]);
+		}
+	}
+	for (i = 0;i < new_n - 1;i++) w[i] = 1;
+}
+
+void model_optimize()
+{
+	for (int j = 1;j < n;j++)
+	{
+		ad_x[j] = 0;
+		for (int i = 0;i < practicedata;i++)
+		{
+			ad_x[j] += a[i][j];
+		}
+		ad_x[j] /= practicedata;
+	}
+	for (int j = 1;j < n - 1;j++)
+	{
+		double sum1, sum2, sum3;
+		sum1 = sum2 = sum3 = 0;
+		for (int i = 0;i < practicedata;i++)
+		{
+			sum1 += (a[i][j] - ad_x[j]) * (a[i][n - 1] - ad_x[n - 1]);
+			sum2 += (a[i][j] - ad_x[j]) * (a[i][j] - ad_x[j]);
+			sum3 += (a[i][n - 1] - ad_x[n - 1]) * (a[i][n - 1] - ad_x[n - 1]);
+		}
+		r[j] = sum1 / sqrt(sum2 * sum3);
+	}
+	for (int j = 1;j <= 4;j++)
+	{
+		int kk = 1;
+		for (int i = 2;i < n - 1;i++)
+		{
+			if (fabs(r[i]) > fabs(r[kk]))
+			{
+				kk = i;
+			}
+		}
+		r[kk] = 0;
+		index[j - 1] = kk;
+	}
+	for (int i = 0;i < practicedata;i++)
+	{
+		new_a[i][0] = 1;
+		for (int j = 1;j < new_n - 1;j++)
+		{
+			new_a[i][j] = a[i][index[j - 1]];
+		}
+		new_a[i][new_n-1] = a[i][n - 1];
+	}
+	for (int i = 0;i < textdata;i++)
+	{
+		new_b[i][0] = 1;
+		for (int j = 1;j < new_n - 1;j++)
+		{
+			new_b[i][j] = b[i][index[j - 1]];
+		}
+		new_b[i][new_n-1] = b[i][n - 1];
+	}
+}
+
+void model_practice()
+{
+	int i, j;
+	while (count--)
+	{
+		double sum1[practicedata];
+		double sum2[new_n - 1];
+		for (i = 0;i < practicedata;i++)
+		{
+			sum1[i] = 0;
+			for (j = 0;j < new_n - 1;j++)
+			{
+				sum1[i] += w[j] * new_a[i][j];
+			}
+			sum1[i] -= new_a[i][new_n - 1];
+		}
+		for (j = 0;j < new_n - 1;j++)
+		{
+			sum2[j] = 0;
+			new_w[j] = w[j];
+			for (i = 0;i < practicedata;i++)
+			{
+				sum2[j] += sum1[i] * new_a[i][j];
+			}
+			new_w[j] -= k * sum2[j] / practicedata;
+		}
+		for (i = 0;i < new_n - 1;i++) w[i] = new_w[i];
+	}
+}
+
+void model_access()
+{
+	int i, j;
+	for (i = 0;i < textdata;i++)
+	{
+		y[i] = 0;
+		for (j = 0;j < new_n - 1;j++)
+		{
+			y[i] += w[j] * new_b[i][j];
+		}
+		//y[i] = y[i] * (max[new_n - 1] - min[new_n - 1]) + min[new_n - 1];
+		//new_b[i][new_n-1] = new_b[i][new_n - 1] * (max[new_n - 1] - min[new_n - 1]) + min[new_n - 1];
+		rmse += (y[i] - new_b[i][new_n - 1]) * (y[i] - new_b[i][new_n - 1]);
+	}
+	rmse /= textdata;
+	rmse = sqrt(rmse);
+}
