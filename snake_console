@@ -369,3 +369,73 @@ void initbarrier()
 		printf("#");
 	}
 }
+
+
+snake.h
+
+
+#include<stdio.h>
+#include<windows.h>
+#include<conio.h>
+#include<time.h>
+#define MAP_HEIGHT 20
+#define MAP_WIDTH 40
+#define UP 'w'
+#define DOWN 's'
+#define LEFT 'a'
+#define RIGHT 'd'
+typedef struct {
+	int x;
+	int y;
+}Food, Snakenode, barrier;
+typedef struct {
+	Snakenode snakenode[1000];
+	int length;
+	int speed;
+}Snake;
+void gotoxy(int x, int y);
+void hide();
+int menu();
+void help();
+void about();
+void initmap();
+void printfood();
+void printfood1();
+int movesnake();
+int iscorrect();
+void speedcontrol();
+void initbarrier();
+
+
+
+
+snake_main.c
+
+
+
+#include "snake.h"
+int main()
+{
+	srand((unsigned int)time(0));
+	int end = 1, result;
+	while (end)
+	{
+		result = menu();
+		switch (result)
+		{
+		case 1:
+			initmap();
+			while (movesnake());
+			break;
+		case 2:
+			help();
+			break;
+		case 3:
+			about();
+			break;
+		case 0:
+			end = 0;break;
+		}
+	}
+	return 0;
+}
